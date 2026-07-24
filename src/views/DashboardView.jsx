@@ -5,12 +5,14 @@ import {
   TrendingUp,
   Users,
   Eye,
+  EyeClosed,
 } from "lucide-react";
+import { useState } from "react";
 
 const stats = [
   {
     title: "Total Revenue",
-    value: "₦0",
+    value: "₦4,250",
     icon: TrendingUp,
     hide: true,
   },
@@ -35,7 +37,10 @@ const stats = [
   },
 ];
 
+
+
 const DashboardView = () => {
+    const [hideStats, setHideStats] = useState(false);
   return (
     <>
       <div className="mb-10">
@@ -65,13 +70,16 @@ const DashboardView = () => {
                 </div>
               </div>
 
-              <h2 className="text-4xl font-bold text-slate-900 flex gap-5">
-                {stat.value}
+              <h2 className="text-3xl font-bold text-slate-900 flex gap-5">
 
+                {hideStats && stat.hide ? "****" : stat.value}
+               
                 <button
                   className={`cursor-pointer self-center items-end ${stat.hide == false ? "hidden" : "bg-white"}`}
+                  onClick={() => setHideStats(!hideStats)}
                 >
-                  <Eye />
+                {hideStats ? <Eye /> : <EyeClosed />}
+                 
                 </button>
               </h2>
 
