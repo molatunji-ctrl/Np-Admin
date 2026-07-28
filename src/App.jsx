@@ -1,24 +1,25 @@
 import { useState } from "react";
-import Sidebar from "./components/Sidebar";
-import CustomersView from "./views/CustomersView";
-import DashboardView from "./views/DashboardView";
-import MessagesView from "./views/MessagesView";
-import OrdersView from "./views/OrdersView";
-import ProductsView from "./views/ProductsView";
+import Sidebar from "./components/layout/Sidebar";
+import { NAV_LABELS } from "./constants/navigation";
+import CustomersPage from "./pages/CustomersPage";
+import DashboardPage from "./pages/DashboardPage";
+import MessagesPage from "./pages/MessagesPage";
+import OrdersPage from "./pages/OrdersPage";
+import ProductsPage from "./pages/ProductsPage";
+import LoginPage from "./pages/LoginPage";
 
 const pageComponents = {
-  Dashboard: DashboardView,
-  Products: ProductsView,
-  Orders: OrdersView,
-  Customers: CustomersView,
-  Messages: MessagesView,
+  Dashboard: DashboardPage,
+  Products: ProductsPage,
+  Orders: OrdersPage,
+  Customers: CustomersPage,
+  Messages: MessagesPage,
+  Login: LoginPage,
 };
-
-const mobileTabs = ["Dashboard", "Products", "Orders", "Customers", "Messages"];
 
 const App = () => {
   const [activePage, setActivePage] = useState("Dashboard");
-  const ActiveView = pageComponents[activePage] || DashboardView;
+  const ActivePage = pageComponents[activePage] || DashboardPage;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -28,24 +29,24 @@ const App = () => {
         <main className="flex-1 px-5 py-8 md:px-10">
           <div className="mb-6 md:hidden">
             <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200">
-              {mobileTabs.map((tab) => (
+              {NAV_LABELS.map((label) => (
                 <button
-                  key={tab}
+                  key={label}
                   type="button"
-                  onClick={() => setActivePage(tab)}
+                  onClick={() => setActivePage(label)}
                   className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    tab === activePage
+                    label === activePage
                       ? "bg-slate-900 text-white"
                       : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  {tab}
+                  {label}
                 </button>
               ))}
             </div>
           </div>
 
-          <ActiveView />
+          <ActivePage setActivePage={setActivePage} />
         </main>
       </div>
     </div>
