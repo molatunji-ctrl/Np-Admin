@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import { NAV_LABELS } from "./constants/navigation";
 import CustomersPage from "./pages/CustomersPage";
@@ -6,25 +6,40 @@ import DashboardPage from "./pages/DashboardPage";
 import MessagesPage from "./pages/MessagesPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProductsPage from "./pages/ProductsPage";
-import LoginPage from "./pages/LoginPage";
+import LoginPage from "./pages/LoginPage"; // Make sure this path is correct
 
+// Notice we removed 'Login' from the pageComponents mapping 
+// because it is no longer a standard sidebar page.
 const pageComponents = {
   Dashboard: DashboardPage,
   Products: ProductsPage,
   Orders: OrdersPage,
   Customers: CustomersPage,
   Messages: MessagesPage,
-  Login: LoginPage,
 };
 
 const App = () => {
+  // 1. Add an authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activePage, setActivePage] = useState("Dashboard");
+
+  // 2. If the user is NOT authenticated, return ONLY the login page
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  // 3. Render the active page dynamically if they ARE authenticated
   const ActivePage = pageComponents[activePage] || DashboardPage;
 
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        <Sidebar activePage={activePage} onSelect={setActivePage} />
+        {/* Pass down a logout function to the Sidebar if needed */}
+        <Sidebar 
+          activePage={activePage} 
+          onSelect={setActivePage} 
+          onLogout={() => setIsAuthenticated(false)} 
+        />
 
         <main className="flex-1 px-5 py-8 md:px-10">
           <div className="mb-6 md:hidden">
@@ -46,6 +61,7 @@ const App = () => {
             </div>
           </div>
 
+          {/* Render the selected component */}
           <ActivePage setActivePage={setActivePage} />
         </main>
       </div>
