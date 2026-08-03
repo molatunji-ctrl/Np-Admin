@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Lock, Mail } from "lucide-react";
+import { loginAdmin } from "../lib/api";
 
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState("");
@@ -13,20 +14,12 @@ const LoginPage = ({ onLogin }) => {
     setError("");
 
     try {
-      // TODO: Replace with your actual backend endpoint for Nuges Pharmacy
-      // const response = await fetch("https://nugesphramacy.vercel.app/api/admin/login", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ email, password }),
-      // });
-      
-      // if (!response.ok) throw new Error("Invalid credentials");
-      // const data = await response.json();
-      
-      // Simulate network request for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Trigger the login state in App.js
+      const result = await loginAdmin(email, password);
+
+      if (result && result.success === false) {
+        throw new Error(result.message || "Invalid credentials");
+      }
+
       onLogin();
     } catch (err) {
       setError(err.message || "Failed to sign in. Please check your credentials.");

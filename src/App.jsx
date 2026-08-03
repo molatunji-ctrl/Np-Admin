@@ -19,13 +19,20 @@ const pageComponents = {
 };
 
 const App = () => {
-  // 1. Add an authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem("nuges_admin_token")));
   const [activePage, setActivePage] = useState("Dashboard");
 
-  // 2. If the user is NOT authenticated, return ONLY the login page
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("nuges_admin_token");
+    setIsAuthenticated(false);
+  };
+
   if (!isAuthenticated) {
-    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
 
   // 3. Render the active page dynamically if they ARE authenticated
@@ -38,7 +45,7 @@ const App = () => {
         <Sidebar 
           activePage={activePage} 
           onSelect={setActivePage} 
-          onLogout={() => setIsAuthenticated(false)} 
+          onLogout={handleLogout} 
         />
 
         <main className="flex-1 px-5 py-8 md:px-10">

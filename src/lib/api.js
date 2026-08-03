@@ -1,9 +1,25 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://np-backend-qnrv.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
+function getStoredToken() {
+  return localStorage.getItem("nuges_admin_token");
+}
+
+function normalizePayload(payload) {
+  if (payload && typeof payload === "object") {
+    if (payload.data !== undefined) return payload.data;
+    if (payload.content !== undefined) return payload.content;
+    if (payload.payload !== undefined) return payload.payload;
+  }
+
+  return payload;
+}
 
 async function request(path, options = {}) {
+  const token = getStoredToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
     ...options,
@@ -14,14 +30,28 @@ async function request(path, options = {}) {
   const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
+    const errorPayload = normalizePayload(payload);
     const message =
-      (payload && typeof payload === "object" && payload.message) ||
-      (payload && typeof payload === "object" && payload.error) ||
+      (errorPayload && typeof errorPayload === "object" && (errorPayload.message || errorPayload.error)) ||
+      (errorPayload && typeof errorPayload === "object" && errorPayload.errors && Object.values(errorPayload.errors).flat().join(", ")) ||
       `Request failed with status ${response.status}`;
     throw new Error(message);
   }
 
-  return payload || null;
+  const normalized = normalizePayload(payload);
+
+  if (normalized && typeof normalized === "object" && normalized.token) {
+    localStorage.setItem("nuges_admin_token", normalized.token);
+  }
+
+  return normalized ?? null;
+}
+
+export async function loginAdmin(email, password) {
+  return request("/api/admin/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
 }
 
 export async function fetchDashboardData() {
