@@ -1,174 +1,201 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://np-backend-qnrv.onrender.com";
 
-const loginPaths = [
-  "/api/admin/login",
-  "/api/auth/login",
-  "/api/login",
-];
-
-const productPaths = [
-  "/api/products",
-  "/api/product",
-];
-
 function getStoredToken() {
   return localStorage.getItem("nuges_admin_token");
 }
 
-function normalizePayload(payload) {
-  if (payload && typeof payload === "object") {
-    if (payload.data !== undefined) return payload.data;
-    if (payload.content !== undefined) return payload.content;
-    if (payload.payload !== undefined) return payload.payload;
-    if (payload.result !== undefined) return payload.result;
-  }
-
-  return payload;
-}
-
-async function readResponseBody(response) {
-  const contentType = response.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-
-  if (!contentType || isJson) {
-    const text = await response.text();
-    if (!text) return null;
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      return text;
-    }
-  }
-
-  return response.text();
-}
-
-async function request(path, options = {}, fallbackPaths = []) {
-  const token = getStoredToken();
-  const attempts = [path, ...fallbackPaths];
-  let lastError = null;
-
-  for (const endpoint of attempts) {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(options.headers || {}),
-        },
-        ...options,
-      });
-
-      const payload = await readResponseBody(response);
-
-      if (!response.ok) {
-        const errorPayload = normalizePayload(payload);
-        const message =
-          (errorPayload && typeof errorPayload === "object" && (errorPayload.message || errorPayload.error)) ||
-          (errorPayload && typeof errorPayload === "object" && errorPayload.errors && Object.values(errorPayload.errors).flat().join(", ")) ||
-          `Request failed with status ${response.status}`;
-        throw new Error(message);
-      }
-
-      const normalized = normalizePayload(payload);
-
-      if (normalized && typeof normalized === "object" && normalized.token) {
-        localStorage.setItem("nuges_admin_token", normalized.token);
-      }
-
-      return normalized ?? null;
-    } catch (error) {
-      lastError = error;
-      if (endpoint !== attempts[attempts.length - 1]) {
-        continue;
-      }
-    }
-  }
-
-  throw lastError || new Error("Request failed");
-}
-
 export async function loginAdmin(email, password) {
-  const payload = { email, password };
-  let lastError = null;
+  const res = await fetch(`${API_BASE_URL}/api/auth/admin/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
 
-  for (const endpoint of loginPaths) {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+  const data = await res.json();
 
-      const body = await readResponseBody(response);
-
-      if (!response.ok) {
-        const errorPayload = normalizePayload(body);
-        const message =
-          (errorPayload && typeof errorPayload === "object" && (errorPayload.message || errorPayload.error)) ||
-          `Request failed with status ${response.status}`;
-        throw new Error(message);
-      }
-
-      const normalized = normalizePayload(body);
-      if (normalized && typeof normalized === "object" && normalized.token) {
-        localStorage.setItem("nuges_admin_token", normalized.token);
-      }
-
-      return normalized ?? { success: true };
-    } catch (error) {
-      lastError = error;
-    }
+  if (!res.ok) {
+    throw new Error(data.message || "Login failed");
   }
 
-  throw lastError || new Error("Unable to reach the backend. Check the API URL and ensure the server is running with CORS enabled.");
+  if (data.token) {
+    localStorage.setItem("nuges_admin_token", data.token);
+  }
+
+  return data;
 }
 
 export async function fetchDashboardData() {
-  return request("/api/dashboard", {}, ["/api/dashboard/stats"]);
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/api/dashboard`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch dashboard data");
+  }
+
+  return res.json();
 }
 
 export async function fetchProducts() {
-  return request("/api/products", {}, productPaths);
+  const token = localStorage.getItem("nuges_admin_token");
+
+  const response = await fetch(`${API_BASE_URL}/api/products`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const products = await response.json();
+
+  if (!response.ok) {
+    throw new Error(products.message || "Failed to fetch products");
+  }
+
+  return products;
 }
 
 export async function createProduct(product) {
-  return request("/api/products", {
+  const token = localStorage.getItem("nuges_admin_token");
+
+  const response = await fetch(`${API_BASE_URL}/api/products`, {
     method: "POST",
-    body: JSON.stringify(product),
-  }, productPaths);
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      category: product.category,
+      badge: product.badge,
+      image: product.image || "",
+      featured: Boolean(product.featured),
+      active: Boolean(product.active),
+    }),
+  });
+
+  const created = await response.json();
+
+  if (!response.ok) {
+    throw new Error(created.message || "Failed to create product");
+  }
+
+  return created;
 }
 
 export async function updateProduct(id, product) {
-  return request(`/api/products/${id}`, {
+  const token = localStorage.getItem("nuges_admin_token");
+
+  const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
     method: "PUT",
-    body: JSON.stringify(product),
-  }, productPaths.map((path) => `${path}/${id}`));
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      category: product.category,
+      badge: product.badge,
+      image: product.image || "",
+      featured: Boolean(product.featured),
+      active: Boolean(product.active),
+    }),
+  });
+
+  const updated = await response.json();
+
+  if (!response.ok) {
+    throw new Error(updated.message || "Failed to update product");
+  }
+
+  return updated;
 }
 
 export async function deleteProduct(id) {
-  return request(`/api/products/${id}`, {
+  const token = localStorage.getItem("nuges_admin_token");
+
+  const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
     method: "DELETE",
-  }, productPaths.map((path) => `${path}/${id}`));
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to delete product");
+  }
+
+  return data;
 }
 
 export async function fetchCustomers() {
-  return request("/api/customers", {}, ["/api/customer"]);
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/api/customers`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch customers");
+  }
+
+  return res.json();
 }
 
 export async function fetchOrders() {
-  return request("/api/orders", {}, ["/api/order"]);
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/api/orders`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch orders");
+  }
+
+  return res.json();
 }
 
 export async function fetchMessages() {
-  return request("/api/messages", {}, ["/api/message"]);
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/api/messages`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch messages");
+  }
+
+  return res.json();
 }
 
 export async function checkBackendHealth() {
-  return request("/api/health", {}, ["/actuator/health"]);
+  const res = await fetch(`${API_BASE_URL}/api/health`);
+  return res.json();
 }
