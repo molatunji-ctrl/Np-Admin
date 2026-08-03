@@ -1,9 +1,8 @@
 import { useBackendData } from "../hooks/useBackendData";
 import { fetchCustomers } from "../lib/api";
-import { customers as fallbackCustomers } from "../data/customers";
 
 const CustomersPage = () => {
-  const { data, loading, error } = useBackendData(fetchCustomers, fallbackCustomers);
+  const { data, loading, error } = useBackendData(fetchCustomers);
 
   return (
     <div className="space-y-6">
@@ -27,9 +26,9 @@ const CustomersPage = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {(data || fallbackCustomers).map((customer) => (
+            {(data || []).map((customer) => (
               <div
-                key={customer.name}
+                key={customer.id || customer.name}
                 className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
               >
                 <div>

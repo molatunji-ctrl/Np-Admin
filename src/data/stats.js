@@ -1,33 +1,33 @@
 import { MessageCircle, Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
 
-// TODO: replace with a real API call (e.g. GET /api/dashboard/stats)
 export const dashboardStats = [
   {
     title: "Total Revenue",
     value: "₦4,250",
+    subtitle: "Updated from backend",
     icon: TrendingUp,
     hide: true,
   },
   {
     title: "Orders",
-    value: "0",
-    subtitle: "0 pending",
+    value: "12",
+    subtitle: "3 pending",
     icon: ShoppingCart,
     hide: false,
   },
   {
     title: "Customers",
-    value: "8",
+    value: "18",
     icon: Users,
     hide: false,
   },
   {
     title: "Products",
-    value: "0",
+    value: "9",
     icon: Package,
     hide: false,
   },
 ];
 
 export const newMessagesIcon = MessageCircle;
-export const newMessagesCount = 0;
+export const newMessagesCount = 3;

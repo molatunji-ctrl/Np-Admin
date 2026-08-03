@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export function useBackendData(fetcher, fallbackValue) {
+export function useBackendData(fetcher, fallbackValue = null) {
   const [data, setData] = useState(fallbackValue);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +18,7 @@ export function useBackendData(fetcher, fallbackValue) {
       } catch (err) {
         if (isMounted) {
           setError(err.message || "Unable to load data");
-          setData(fallbackValue);
+          setData(null);
         }
       } finally {
         if (isMounted) {

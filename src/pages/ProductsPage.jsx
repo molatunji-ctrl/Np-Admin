@@ -1,7 +1,6 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useBackendData } from "../hooks/useBackendData";
 import { createProduct, deleteProduct, fetchProducts, updateProduct } from "../lib/api";
-import { products as fallbackProducts } from "../data/products";
 import { useEffect, useState } from "react";
 
 const defaultProductForm = {
@@ -35,14 +34,14 @@ const normalizeProduct = (product) => {
 };
 
 const ProductsPage = () => {
-  const { data, loading, error } = useBackendData(fetchProducts, fallbackProducts);
-  const [products, setProducts] = useState(data || fallbackProducts || []);
+  const { data, loading, error } = useBackendData(fetchProducts);
+  const [products, setProducts] = useState(data || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setProducts(data || fallbackProducts || []);
+    setProducts(data || []);
   }, [data]);
 
   const openCreateModal = () => {

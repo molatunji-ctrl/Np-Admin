@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Eye, EyeClosed, MessageCircle, Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
 import { useBackendData } from "../hooks/useBackendData";
 import { fetchDashboardData } from "../lib/api";
-import { dashboardStats as fallbackStats, newMessagesIcon, newMessagesCount as fallbackMessagesCount } from "../data/stats";
 
 const iconMap = {
   TrendingUp,
@@ -12,18 +11,12 @@ const iconMap = {
   MessageCircle,
 };
 
-const NewMessagesIcon = newMessagesIcon;
-
 const DashboardPage = ({ setActivePage }) => {
   const [hideStats, setHideStats] = useState(false);
-  const { data, loading, error } = useBackendData(fetchDashboardData, {
-    stats: fallbackStats,
-    newMessagesCount: fallbackMessagesCount,
-    orders: [],
-  });
+  const { data, loading, error } = useBackendData(fetchDashboardData);
 
   const dashboardStats = useMemo(() => {
-    return (data?.stats || fallbackStats).map((stat) => ({
+    return (data?.stats || []).map((stat) => ({
       ...stat,
       icon: iconMap[stat.iconName] || iconMap.TrendingUp,
     }));
@@ -100,7 +93,7 @@ const DashboardPage = ({ setActivePage }) => {
               New Messages
             </p>
 
-            <h2 className="mt-2 text-3xl font-bold">{data?.newMessagesCount ?? fallbackMessagesCount}</h2>
+            <h2 className="mt-2 text-3xl font-bold">{data?.newMessagesCount ?? 0}</h2>
           </div>
 
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
