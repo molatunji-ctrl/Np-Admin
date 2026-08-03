@@ -9,11 +9,19 @@ async function request(path, options = {}) {
     ...options,
   });
 
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  const payload = isJson ? await response.json() : await response.text();
+
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    const message =
+      (payload && typeof payload === "object" && payload.message) ||
+      (payload && typeof payload === "object" && payload.error) ||
+      `Request failed with status ${response.status}`;
+    throw new Error(message);
   }
 
-  return response.json();
+  return payload || null;
 }
 
 export async function fetchDashboardData() {
@@ -22,6 +30,26 @@ export async function fetchDashboardData() {
 
 export async function fetchProducts() {
   return request("/api/products");
+}
+
+export async function createProduct(product) {
+  return request("/api/products", {
+    method: "POST",
+    body: JSON.stringify(product),
+  });
+}
+
+export async function updateProduct(id, product) {
+  return request(`/api/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(product),
+  });
+}
+
+export async function deleteProduct(id) {
+  return request(`/api/products/${id}`, {
+    method: "DELETE",
+  });
 }
 
 export async function fetchCustomers() {

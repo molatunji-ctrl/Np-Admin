@@ -1,28 +1,96 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useBackendData } from "../hooks/useBackendData";
-import { fetchProducts } from "../lib/api";
+import { createProduct, deleteProduct, fetchProducts, updateProduct } from "../lib/api";
 import { products as fallbackProducts } from "../data/products";
 import { useEffect, useState } from "react";
+
+const defaultProductForm = {
+  name: "",
+  description: "",
+  price: "",
+  stock: "",
+  category: "",
+  badge: "",
+  image: "",
+  featured: false,
+  active: true,
+};
+
+const normalizeProduct = (product) => {
+  const price = Number(product.price ?? 0);
+  const stock = Number(product.stock ?? 0);
+
+  return {
+    ...product,
+    name: product.name?.trim() || "Unnamed product",
+    description: product.description?.trim() || "",
+    category: product.category?.trim() || "General",
+    badge: product.badge?.trim() || "New",
+    image: product.image || "",
+    price: Number.isNaN(price) ? 0 : price,
+    stock: Number.isNaN(stock) ? 0 : stock,
+    featured: Boolean(product.featured),
+    active: product.active !== false,
+  };
+};
 
 const ProductsPage = () => {
   const { data, loading, error } = useBackendData(fetchProducts, fallbackProducts);
   const [products, setProducts] = useState(data || fallbackProducts || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setProducts(data || fallbackProducts || []);
   }, [data]);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
-
-  const addProduct = (newProduct) => {
-    setProducts((prev) => [{ ...newProduct, id: Date.now() }, ...prev]);
-    closeModal();
+  const openCreateModal = () => {
+    setEditingProduct(null);
+    setIsModalOpen(true);
   };
 
-  const removeProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const openEditModal = (product) => {
+    setEditingProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingProduct(null);
+  };
+
+  const handleSaveProduct = async (form) => {
+    const normalized = normalizeProduct(form);
+    setIsSaving(true);
+
+    try {
+      if (editingProduct?.id) {
+        const updated = await updateProduct(editingProduct.id, normalized);
+        setProducts((prev) =>
+          prev.map((product) => (Number(product.id) === Number(updated.id) ? updated : product))
+        );
+      } else {
+        const created = await createProduct(normalized);
+        setProducts((prev) => [created, ...prev]);
+      }
+      closeModal();
+    } catch (submitError) {
+      console.error(submitError);
+      window.alert(submitError.message || "Unable to save product.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const removeProduct = async (id) => {
+    try {
+      await deleteProduct(id);
+      setProducts((prev) => prev.filter((product) => Number(product.id) !== Number(id)));
+    } catch (deleteError) {
+      console.error(deleteError);
+      window.alert(deleteError.message || "Unable to delete product.");
+    }
   };
 
   return (
@@ -43,7 +111,7 @@ const ProductsPage = () => {
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-semibold">Inventory</h2>
-          <button onClick={openModal} className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+          <button onClick={openCreateModal} className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">
             <Plus size={20} />
             Add Product
           </button>
@@ -67,8 +135,19 @@ const ProductsPage = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-slate-700">{product.price}</span>
+                  <span className="text-sm font-semibold text-slate-700">
+                    {product.price ? `₦${Number(product.price).toLocaleString()}` : "₦0"}
+                  </span>
                   <button
+                    type="button"
+                    onClick={() => openEditModal(product)}
+                    className="text-slate-500 hover:text-slate-700"
+                    aria-label={`Edit ${product.name}`}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => removeProduct(product.id)}
                     className="text-slate-500 hover:text-red-600"
                     aria-label={`Delete ${product.name}`}
@@ -86,8 +165,13 @@ const ProductsPage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
           <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-lg">
-            <h3 className="text-2xl font-semibold">New product</h3>
-            <ProductForm onCancel={closeModal} onSave={addProduct} />
+            <h3 className="text-2xl font-semibold">{editingProduct ? "Edit product" : "New product"}</h3>
+            <ProductForm
+              initialData={editingProduct ? { ...defaultProductForm, ...editingProduct } : defaultProductForm}
+              onCancel={closeModal}
+              onSave={handleSaveProduct}
+              isSaving={isSaving}
+            />
           </div>
         </div>
       )}
@@ -95,34 +179,38 @@ const ProductsPage = () => {
   );
 };
 
-const ProductForm = ({ onSave, onCancel }) => {
+const ProductForm = ({ initialData, onSave, onCancel, isSaving }) => {
   const [form, setForm] = useState({
-    name: "",
-    description: "",
-    price: 0,
-    stock: 0,
-    category: "",
-    badge: "",
-    image: "",
-    featured: false,
-    active: true,
+    ...defaultProductForm,
+    ...initialData,
+    price: initialData?.price ?? "",
+    stock: initialData?.stock ?? "",
   });
+
+  useEffect(() => {
+    setForm({
+      ...defaultProductForm,
+      ...initialData,
+      price: initialData?.price ?? "",
+      stock: initialData?.stock ?? "",
+    });
+  }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
+    setForm((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(form);
+    await onSave(form);
   };
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-4">
       <div>
         <label className="block text-sm text-slate-600">Name</label>
-        <input name="name" value={form.name} onChange={handleChange} className="mt-1 w-full rounded-lg border px-3 py-2" />
+        <input name="name" value={form.name} onChange={handleChange} className="mt-1 w-full rounded-lg border px-3 py-2" required />
       </div>
 
       <div>
@@ -133,11 +221,11 @@ const ProductForm = ({ onSave, onCancel }) => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm text-slate-600">Price</label>
-          <input name="price" type="number" value={form.price} onChange={handleChange} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          <input name="price" type="number" value={form.price} onChange={handleChange} className="mt-1 w-full rounded-lg border px-3 py-2" required />
         </div>
         <div>
           <label className="block text-sm text-slate-600">Stock</label>
-          <input name="stock" type="number" value={form.stock} onChange={handleChange} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          <input name="stock" type="number" value={form.stock} onChange={handleChange} className="mt-1 w-full rounded-lg border px-3 py-2" required />
         </div>
       </div>
 
@@ -170,7 +258,9 @@ const ProductForm = ({ onSave, onCancel }) => {
 
       <div className="mt-4 flex justify-end gap-3">
         <button type="button" onClick={onCancel} className="rounded-md px-4 py-2 text-sm">Cancel</button>
-        <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Save product</button>
+        <button type="submit" disabled={isSaving} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-70">
+          {isSaving ? "Saving..." : "Save product"}
+        </button>
       </div>
     </form>
   );
