@@ -1,3 +1,6 @@
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "./firebase";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://np-backend-qnrv.onrender.com";
 
 function getStoredToken() {
@@ -5,25 +8,18 @@ function getStoredToken() {
 }
 
 export async function loginAdmin(email, password) {
-  const res = await fetch(`${API_BASE_URL}/api/auth/admin/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const token = await userCredential.user.getIdToken();
+
+  localStorage.setItem("nuges_admin_token", token);
+
+  return {
+    token,
+    user: {
+      email: userCredential.user.email,
+      uid: userCredential.user.uid,
     },
-    body: JSON.stringify({ email, password }),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || "Login failed");
-  }
-
-  if (data.token) {
-    localStorage.setItem("nuges_admin_token", data.token);
-  }
-
-  return data;
+  };
 }
 
 export async function fetchDashboardData() {
@@ -46,8 +42,7 @@ export async function fetchDashboardData() {
 export async function fetchProducts() {
   const token = localStorage.getItem("nuges_admin_token");
 
-  const response = await fetch(`${API_BASE_URL}/api/products`, {
-    method: "GET",
+  const response = await fetch("https://np-backend-qnrv.onrender.com/api/products", {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
