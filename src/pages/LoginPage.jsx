@@ -22,7 +22,14 @@ const LoginPage = ({ onLogin }) => {
 
       onLogin();
     } catch (err) {
-      setError(err.message || "Failed to sign in. Please check your credentials.");
+      const message = err?.message || "";
+
+      if (message.includes("Failed to fetch") || message.includes("NetworkError") || message.includes("fetch")) {
+        setError("Unable to reach the backend. Check the API URL and ensure the server is running with CORS enabled.");
+        return;
+      }
+
+      setError(message || "Failed to sign in. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }
