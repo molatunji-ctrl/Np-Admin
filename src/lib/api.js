@@ -1,10 +1,47 @@
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "./firebase";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://np-backend-qnrv.onrender.com";
 
+export class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 function getStoredToken() {
   return localStorage.getItem("nuges_admin_token");
+}
+
+function authHeaders(token) {
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+// Parses a response as JSON safely (handles empty/non-JSON bodies) and
+// throws a consistent ApiError on failure. A 401 means the stored token
+// is invalid or expired — broadcast that globally so App.jsx can log
+// the user out, without every call site needing to know about auth.
+async function parseJsonOrThrow(response, fallbackMessage) {
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    // No JSON body — fine, we'll fall back to fallbackMessage
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent("nuges:unauthorized"));
+    }
+    throw new ApiError(data?.message || fallbackMessage, response.status);
+  }
+
+  return data;
 }
 
 export async function loginAdmin(email, password) {
@@ -22,51 +59,29 @@ export async function loginAdmin(email, password) {
   };
 }
 
+export async function logoutAdmin() {
+  localStorage.removeItem("nuges_admin_token");
+  await signOut(auth);
+}
+
 export async function fetchDashboardData() {
-  const token = getStoredToken();
   const res = await fetch(`${API_BASE_URL}/api/dashboard`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: authHeaders(getStoredToken()),
   });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || "Failed to fetch dashboard data");
-  }
-
-  return res.json();
+  return parseJsonOrThrow(res, "Failed to fetch dashboard data");
 }
 
 export async function fetchProducts() {
-  const token = localStorage.getItem("nuges_admin_token");
-
-  const response = await fetch("https://np-backend-qnrv.onrender.com/api/products", {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+  const res = await fetch(`${API_BASE_URL}/api/products`, {
+    headers: authHeaders(getStoredToken()),
   });
-
-  const products = await response.json();
-
-  if (!response.ok) {
-    throw new Error(products.message || "Failed to fetch products");
-  }
-
-  return products;
+  return parseJsonOrThrow(res, "Failed to fetch products");
 }
 
 export async function createProduct(product) {
-  const token = localStorage.getItem("nuges_admin_token");
-
-  const response = await fetch(`${API_BASE_URL}/api/products`, {
+  const res = await fetch(`${API_BASE_URL}/api/products`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(getStoredToken()),
     body: JSON.stringify({
       name: product.name,
       description: product.description,
@@ -79,25 +94,13 @@ export async function createProduct(product) {
       active: Boolean(product.active),
     }),
   });
-
-  const created = await response.json();
-
-  if (!response.ok) {
-    throw new Error(created.message || "Failed to create product");
-  }
-
-  return created;
+  return parseJsonOrThrow(res, "Failed to create product");
 }
 
 export async function updateProduct(id, product) {
-  const token = localStorage.getItem("nuges_admin_token");
-
-  const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(getStoredToken()),
     body: JSON.stringify({
       name: product.name,
       description: product.description,
@@ -110,84 +113,36 @@ export async function updateProduct(id, product) {
       active: Boolean(product.active),
     }),
   });
-
-  const updated = await response.json();
-
-  if (!response.ok) {
-    throw new Error(updated.message || "Failed to update product");
-  }
-
-  return updated;
+  return parseJsonOrThrow(res, "Failed to update product");
 }
 
 export async function deleteProduct(id) {
-  const token = localStorage.getItem("nuges_admin_token");
-
-  const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(getStoredToken()),
   });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(data.message || "Failed to delete product");
-  }
-
-  return data;
+  return parseJsonOrThrow(res, "Failed to delete product");
 }
 
 export async function fetchCustomers() {
-  const token = getStoredToken();
   const res = await fetch(`${API_BASE_URL}/api/customers`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: authHeaders(getStoredToken()),
   });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || "Failed to fetch customers");
-  }
-
-  return res.json();
+  return parseJsonOrThrow(res, "Failed to fetch customers");
 }
 
 export async function fetchOrders() {
-  const token = getStoredToken();
   const res = await fetch(`${API_BASE_URL}/api/orders`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: authHeaders(getStoredToken()),
   });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || "Failed to fetch orders");
-  }
-
-  return res.json();
+  return parseJsonOrThrow(res, "Failed to fetch orders");
 }
 
 export async function fetchMessages() {
-  const token = getStoredToken();
   const res = await fetch(`${API_BASE_URL}/api/messages`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: authHeaders(getStoredToken()),
   });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || "Failed to fetch messages");
-  }
-
-  return res.json();
+  return parseJsonOrThrow(res, "Failed to fetch messages");
 }
 
 export async function checkBackendHealth() {

@@ -97,7 +97,7 @@ const DashboardPage = ({ setActivePage }) => {
           </div>
 
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
-            <NewMessagesIcon size={20} className="text-slate-700" />
+            <MessageCircle size={20} className="text-slate-700" />
           </div>
         </div>
       </section>

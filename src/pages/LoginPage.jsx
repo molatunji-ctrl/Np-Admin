@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Lock, Mail } from "lucide-react";
 import { loginAdmin } from "../lib/api";
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = ({ onLogin, sessionExpired }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +38,6 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-2xl font-bold text-white">
             N
@@ -48,6 +47,12 @@ const LoginPage = ({ onLogin }) => {
             Sign in to manage Nuges Pharmacy
           </p>
         </div>
+
+        {sessionExpired && !error && (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            Your session expired. Please sign in again.
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -102,7 +107,6 @@ const LoginPage = ({ onLogin }) => {
             {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
       </div>
     </div>
   );

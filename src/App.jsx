@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { signOut } from "firebase/auth";
+import { auth } from "./lib/firebase";
 import Sidebar from "./components/layout/Sidebar";
 import { NAV_LABELS } from "./constants/navigation";
 import CustomersPage from "./pages/CustomersPage";
@@ -6,10 +8,8 @@ import DashboardPage from "./pages/DashboardPage";
 import MessagesPage from "./pages/MessagesPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProductsPage from "./pages/ProductsPage";
-import LoginPage from "./pages/LoginPage"; // Make sure this path is correct
+import LoginPage from "./pages/LoginPage";
 
-// Notice we removed 'Login' from the pageComponents mapping 
-// because it is no longer a standard sidebar page.
 const pageComponents = {
   Dashboard: DashboardPage,
   Products: ProductsPage,
@@ -19,34 +19,50 @@ const pageComponents = {
 };
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem("nuges_admin_token")));
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    Boolean(localStorage.getItem("nuges_admin_token"))
+  );
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [activePage, setActivePage] = useState("Dashboard");
 
+  const handleLogout = useCallback(async () => {
+    localStorage.removeItem("nuges_admin_token");
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Firebase sign-out failed:", err);
+    }
+    setIsAuthenticated(false);
+  }, []);
+
+  // Any API call anywhere in the app that gets a 401 (expired/invalid
+  // token) dispatches this event. We catch it once, at the top level,
+  // and boot the user back to the login screen.
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setSessionExpired(true);
+      handleLogout();
+    };
+
+    window.addEventListener("nuges:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("nuges:unauthorized", handleUnauthorized);
+  }, [handleLogout]);
+
   const handleLogin = () => {
+    setSessionExpired(false);
     setIsAuthenticated(true);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("nuges_admin_token");
-    setIsAuthenticated(false);
-  };
-
   if (!isAuthenticated) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onLogin={handleLogin} sessionExpired={sessionExpired} />;
   }
 
-  // 3. Render the active page dynamically if they ARE authenticated
   const ActivePage = pageComponents[activePage] || DashboardPage;
 
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        {/* Pass down a logout function to the Sidebar if needed */}
-        <Sidebar 
-          activePage={activePage} 
-          onSelect={setActivePage} 
-          onLogout={handleLogout} 
-        />
+        <Sidebar activePage={activePage} onSelect={setActivePage} onLogout={handleLogout} />
 
         <main className="flex-1 px-5 py-8 md:px-10">
           <div className="mb-6 md:hidden">
@@ -68,7 +84,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* Render the selected component */}
           <ActivePage setActivePage={setActivePage} />
         </main>
       </div>
