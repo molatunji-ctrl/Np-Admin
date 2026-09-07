@@ -29,14 +29,15 @@ const MessagesPage = () => {
             {(data || []).map((message) => (
               <div key={message.id} className="rounded-2xl border border-slate-200 px-4 py-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-slate-900">{message.sender}</p>
-                  {message.unread && (
+                  <p className="font-semibold text-slate-900">{message.name || message.email}</p>
+                  {message.status === "UNREAD" && (
                     <span className="rounded-full bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
                       New
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-sm text-slate-500">{message.preview}</p>
+                <p className="mt-1 text-sm font-medium text-slate-700">{message.subject}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-slate-500">{message.message}</p>
               </div>
             ))}
           </div>

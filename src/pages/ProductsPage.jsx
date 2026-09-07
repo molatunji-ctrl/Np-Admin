@@ -13,6 +13,7 @@ const defaultProductForm = {
   image: "",
   featured: false,
   active: true,
+  prescriptionRequired: false,
 };
 
 const normalizeProduct = (product) => {
@@ -30,6 +31,7 @@ const normalizeProduct = (product) => {
     stock: Number.isNaN(stock) ? 0 : stock,
     featured: Boolean(product.featured),
     active: product.active !== false,
+    prescriptionRequired: Boolean(product.prescriptionRequired),
   };
 };
 
@@ -252,6 +254,10 @@ const ProductForm = ({ initialData, onSave, onCancel, isSaving }) => {
         <label className="flex items-center gap-2 text-sm">
           <input name="active" type="checkbox" checked={form.active} onChange={handleChange} />
           Active
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input name="prescriptionRequired" type="checkbox" checked={form.prescriptionRequired} onChange={handleChange} />
+          Prescription required
         </label>
       </div>
 

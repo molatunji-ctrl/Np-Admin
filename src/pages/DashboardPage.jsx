@@ -120,10 +120,10 @@ const DashboardPage = ({ setActivePage }) => {
               <div key={order.id} className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3">
                 <div>
                   <p className="font-semibold text-slate-900">{order.id}</p>
-                  <p className="text-sm text-slate-500">{order.customer}</p>
+                  <p className="text-sm text-slate-500">{order.customerName || order.customerEmail}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-slate-700">{order.total}</p>
+                  <p className="text-sm font-semibold text-slate-700">₦{Number(order.total || 0).toLocaleString("en-NG")}</p>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{order.status}</p>
                 </div>
               </div>
