@@ -4,6 +4,7 @@ import {
   ShoppingCart,
   Users,
   MessageCircle,
+  FileCheck2,
 } from "lucide-react";
 
 // Single source of truth for the app's navigation.
@@ -12,6 +13,7 @@ export const NAV_ITEMS = [
   { label: "Dashboard", icon: Home },
   { label: "Products", icon: Package },
   { label: "Orders", icon: ShoppingCart },
+  { label: "Prescriptions", icon: FileCheck2 },
   { label: "Customers", icon: Users },
   { label: "Messages", icon: MessageCircle },
 ];

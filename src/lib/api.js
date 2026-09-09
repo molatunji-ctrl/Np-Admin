@@ -164,6 +164,34 @@ export async function fetchOrders() {
   return pageContent(await parseJsonOrThrow(res, "Failed to fetch orders"));
 }
 
+export async function fetchPrescriptions(status = "PENDING") {
+  const params = new URLSearchParams({ size: "50" });
+  if (status && status !== "ALL") params.set("status", status);
+  const res = await fetch(`${API_BASE_URL}/api/admin/prescriptions?${params}`, {
+    headers: authHeaders(getStoredToken()),
+  });
+  return pageContent(await parseJsonOrThrow(res, "Failed to fetch prescriptions"));
+}
+
+export async function reviewPrescription(id, review) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/prescriptions/${id}/review`, {
+    method: "PUT",
+    headers: authHeaders(getStoredToken()),
+    body: JSON.stringify(review),
+  });
+  return parseJsonOrThrow(res, "Failed to review prescription");
+}
+
+export async function fetchPrescriptionFile(id) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/prescriptions/${id}/file`, {
+    headers: authHeaders(getStoredToken()),
+  });
+  if (!res.ok) {
+    return parseJsonOrThrow(res, "Failed to open prescription file");
+  }
+  return res.blob();
+}
+
 export async function updateOrderStatus(id, status) {
   const res = await fetch(`${API_BASE_URL}/api/admin/orders/${id}/status`, {
     method: "PUT",
