@@ -28,18 +28,14 @@ const CustomersPage = () => {
           <div className="space-y-3">
             {(data || []).map((customer) => (
               <div
-                key={customer.id || customer.name}
+                key={customer.id || customer.email}
                 className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
               >
                 <div>
-                  <p className="font-semibold text-slate-900">{customer.name}</p>
-                  <p className="text-sm text-slate-500">
-                    {customer.orders} orders
-                  </p>
+                  <p className="font-semibold text-slate-900">{customer.fullname || "Customer"}</p>
+                  <p className="text-sm text-slate-500">{customer.email}</p>
                 </div>
-                <span className="text-sm font-semibold text-slate-700">
-                  {customer.spend}
-                </span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer</span>
               </div>
             ))}
           </div>

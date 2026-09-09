@@ -44,6 +44,20 @@ async function parseJsonOrThrow(response, fallbackMessage) {
   return data;
 }
 
+function pageContent(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.content)) return data.content;
+  return [];
+}
+
+function formatMoney(value) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+}
+
 export async function loginAdmin(email, password) {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   const token = await userCredential.user.getIdToken();
@@ -65,21 +79,31 @@ export async function logoutAdmin() {
 }
 
 export async function fetchDashboardData() {
-  const res = await fetch(`${API_BASE_URL}/api/dashboard`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/dashboard/stats`, {
     headers: authHeaders(getStoredToken()),
   });
-  return parseJsonOrThrow(res, "Failed to fetch dashboard data");
+  const data = await parseJsonOrThrow(res, "Failed to fetch dashboard data");
+  return {
+    stats: [
+      { title: "Paid revenue", value: formatMoney(data.paidRevenue), iconName: "TrendingUp", hide: true },
+      { title: "Orders", value: data.totalOrders || 0, iconName: "ShoppingCart" },
+      { title: "Customers", value: Math.max(0, Number(data.totalUsers || 0) - Number(data.totalAdmins || 0)), iconName: "Users" },
+      { title: "Products", value: data.activeProducts || 0, iconName: "Package" },
+    ],
+    newMessagesCount: data.unreadMessages || 0,
+    orders: data.recentOrders || [],
+  };
 }
 
 export async function fetchProducts() {
-  const res = await fetch(`${API_BASE_URL}/api/products`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/products?size=50`, {
     headers: authHeaders(getStoredToken()),
   });
-  return parseJsonOrThrow(res, "Failed to fetch products");
+  return pageContent(await parseJsonOrThrow(res, "Failed to fetch products"));
 }
 
 export async function createProduct(product) {
-  const res = await fetch(`${API_BASE_URL}/api/products`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/products`, {
     method: "POST",
     headers: authHeaders(getStoredToken()),
     body: JSON.stringify({
@@ -92,13 +116,14 @@ export async function createProduct(product) {
       image: product.image || "",
       featured: Boolean(product.featured),
       active: Boolean(product.active),
+      prescriptionRequired: Boolean(product.prescriptionRequired),
     }),
   });
   return parseJsonOrThrow(res, "Failed to create product");
 }
 
 export async function updateProduct(id, product) {
-  const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/products/${id}`, {
     method: "PUT",
     headers: authHeaders(getStoredToken()),
     body: JSON.stringify({
@@ -111,13 +136,14 @@ export async function updateProduct(id, product) {
       image: product.image || "",
       featured: Boolean(product.featured),
       active: Boolean(product.active),
+      prescriptionRequired: Boolean(product.prescriptionRequired),
     }),
   });
   return parseJsonOrThrow(res, "Failed to update product");
 }
 
 export async function deleteProduct(id) {
-  const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/products/${id}`, {
     method: "DELETE",
     headers: authHeaders(getStoredToken()),
   });
@@ -125,24 +151,33 @@ export async function deleteProduct(id) {
 }
 
 export async function fetchCustomers() {
-  const res = await fetch(`${API_BASE_URL}/api/customers`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/customers?size=50`, {
     headers: authHeaders(getStoredToken()),
   });
-  return parseJsonOrThrow(res, "Failed to fetch customers");
+  return pageContent(await parseJsonOrThrow(res, "Failed to fetch customers"));
 }
 
 export async function fetchOrders() {
-  const res = await fetch(`${API_BASE_URL}/api/orders`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/orders?size=50`, {
     headers: authHeaders(getStoredToken()),
   });
-  return parseJsonOrThrow(res, "Failed to fetch orders");
+  return pageContent(await parseJsonOrThrow(res, "Failed to fetch orders"));
+}
+
+export async function updateOrderStatus(id, status) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/orders/${id}/status`, {
+    method: "PUT",
+    headers: authHeaders(getStoredToken()),
+    body: JSON.stringify({ status }),
+  });
+  return parseJsonOrThrow(res, "Failed to update order status");
 }
 
 export async function fetchMessages() {
-  const res = await fetch(`${API_BASE_URL}/api/messages`, {
+  const res = await fetch(`${API_BASE_URL}/api/contact?size=50`, {
     headers: authHeaders(getStoredToken()),
   });
-  return parseJsonOrThrow(res, "Failed to fetch messages");
+  return pageContent(await parseJsonOrThrow(res, "Failed to fetch messages"));
 }
 
 export async function checkBackendHealth() {
