@@ -9,11 +9,13 @@ import MessagesPage from "./pages/MessagesPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProductsPage from "./pages/ProductsPage";
 import LoginPage from "./pages/LoginPage";
+import PrescriptionsPage from "./pages/PrescriptionsPage";
 
 const pageComponents = {
   Dashboard: DashboardPage,
   Products: ProductsPage,
   Orders: OrdersPage,
+  Prescriptions: PrescriptionsPage,
   Customers: CustomersPage,
   Messages: MessagesPage,
 };
